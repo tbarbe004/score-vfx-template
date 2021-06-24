@@ -6,535 +6,468 @@
 
 namespace MyVfx
 {
-const int m_materialSize = 16;
-const int instances = 5'000;
-
-struct InstancedMesh : score::gfx::Mesh
+/** Here we define a mesh fairly manually and in a fairly suboptimal way
+ * (based on this: https://pastebin.com/DXKEmvap)
+ */
+struct TexturedCube final : score::gfx::Mesh
 {
-  InstancedMesh(gsl::span<const float> vtx, int count)
+  static std::vector<float> generateCubeMesh() noexcept
   {
-    vertexInputBindings.push_back({3 * sizeof(float)});
-    vertexInputBindings.push_back(
-        {2 * sizeof(float),
-         QRhiVertexInputBinding::Classification::PerInstance});
-    vertexAttributeBindings.push_back(
-        {0, 0, QRhiVertexInputAttribute::Float3, 0});
-    vertexAttributeBindings.push_back(
-        {1, 1, QRhiVertexInputAttribute::Float2, 0});
-    vertexArray = vtx;
-    vertexCount = count;
+    struct vec3
+    {
+      float x, y, z;
+    };
+    struct vec2
+    {
+      float x, y;
+    };
+
+    static constexpr const unsigned int indices[6 * 6] = {
+        0, 1, 3, 3, 1, 2, //
+        1, 5, 2, 2, 5, 6, //
+        5, 4, 6, 6, 4, 7, //
+        4, 0, 7, 7, 0, 3, //
+        3, 2, 7, 7, 2, 6, //
+        4, 5, 0, 0, 5, 1  //
+    };
+
+    static constexpr const vec3 vertices[8]
+        = {{-1., -1., -1.}, //
+           {1., -1., -1.},  //
+           {1., 1., -1.},   //
+           {-1., 1., -1.},  //
+           {-1., -1., 1.},  //
+           {1., -1., 1.},   //
+           {1., 1., 1.},    //
+           {-1., 1., 1.}};
+
+    static constexpr const vec2 texCoords[4]
+        = {{0, 0}, //
+           {1, 0}, //
+           {1, 1}, //
+           {0, 1}};
+
+    static constexpr const vec3 normals[6]
+        = {{0, 0, 1},  //
+           {1, 0, 0},  //
+           {0, 0, -1}, //
+           {-1, 0, 0}, //
+           {0, 1, 0},  //
+           {0, -1, 0}};
+
+    static constexpr const int texInds[6] = {0, 1, 3, 3, 1, 2};
+
+    std::vector<float> meshBuf;
+    meshBuf.reserve(36 * 3 + 36 * 2 + 36 * 3);
+
+    // The beginning of the buffer is:
+    // [ {x y z} {x y z} {x y z} ... ]
+    for (int i = 0; i < 36; i++)
+    {
+      meshBuf.push_back(vertices[indices[i]].x);
+      meshBuf.push_back(vertices[indices[i]].y);
+      meshBuf.push_back(vertices[indices[i]].z);
+    }
+
+    // Then we store the texcoords at the end: [ {u v} {u v} {u v} ... ]
+    for (int i = 0; i < 36; i++)
+    {
+      meshBuf.push_back(texCoords[texInds[i % 6]].x);
+      meshBuf.push_back(texCoords[texInds[i % 6]].y);
+    }
+
+    // Then the normals (unused in this example)
+    for (int i = 0; i < 36; i++)
+    {
+      meshBuf.push_back(normals[indices[i / 6]].x);
+      meshBuf.push_back(normals[indices[i / 6]].y);
+      meshBuf.push_back(normals[indices[i / 6]].z);
+    }
+
+    return meshBuf;
   }
 
+  // Generate our mesh data
+  const std::vector<float> mesh = generateCubeMesh();
+
+  explicit TexturedCube()
+  {
+    // Our mesh's attribute data is not interleaved, thus
+    // we have multiple bindings stored in the same buffer:
+    // [ {x y z} {x y z} {x y z} ... ] [ {u v} {u v} {u v} ... ]
+
+    // Vertex
+    // Each `in vec3 position;` in the vertex shader will be an [ x y z ] element
+    // The stride is the 3 * sizeof(float) - it means that:
+    // * vertex 0's data in this attribute will start at 0 (in bytes)
+    // * vertex 1's data in this attribute will start at 3 * sizeof(float)
+    // * vertex 2's data in this attribute will start at 6 * sizeof(float)
+    // (basically that every vertex position is one after each other).
+    vertexInputBindings.push_back({3 * sizeof(float)});
+    vertexAttributeBindings.push_back(
+        {0, 0, QRhiVertexInputAttribute::Float3, 0});
+
+    // Texcoord
+    // Each `in vec2 texcoord;` in the fragment shader will be an [ u v ] element
+    vertexInputBindings.push_back({2 * sizeof(float)});
+    vertexAttributeBindings.push_back(
+        {1, 1, QRhiVertexInputAttribute::Float2, 0});
+
+    // These variables are used by score to upload the texture
+    // and send the draw call automatically
+    vertexArray = mesh;
+    vertexCount = 36;
+
+    // Note: if we had an interleaved mesh, where the data is stored like
+    // [ { x y z u v } { x y z u v } { x y z u v } ] ...
+    // Then we'd have a single binding of stride 5 * sizeof(float)
+    // (3 floats for the position and 2 floats for the texture coordinates):
+
+    // vertexInputBindings.push_back({5 * sizeof(float)});
+
+    // And two attributes mapped to that binding
+    // The first attribute (position) starts at byte 0 in each element:
+    //
+    //     vertexAttributeBindings.push_back(
+    //         {0, 0, QRhiVertexInputAttribute::Float3, 0});
+    //
+    // The second attribute (texcoord) starts at byte 3 * sizeof(float)
+    // (just after the position):
+    //
+    //     vertexAttributeBindings.push_back(
+    //         {0, 1, QRhiVertexInputAttribute::Float2, 3 * sizeof(float)});
+  }
+
+  // Utility singleton
+  static const TexturedCube& instance() noexcept
+  {
+    static const TexturedCube cube;
+    return cube;
+  }
+
+  // Ignore this function
+  const char* defaultVertexShader() const noexcept override { return ""; }
+
+  // This function is called when running the draw calls,
+  // it tells the pipeline which buffers are going to be bound
+  // to each attribute defined above
   void setupBindings(
       QRhiBuffer& vtxData,
       QRhiBuffer* idxData,
       QRhiCommandBuffer& cb) const noexcept override
   {
-  }
-
-  const char* defaultVertexShader() const noexcept override
-  {
-    return R"_(#version 450
-             layout(location = 0) in vec3 position;
-             layout(location = 1) in vec2 offset;
-
-             layout(location = 0) out vec3 vpos;
-             layout(std140, binding = 0) uniform renderer_t {
-               mat4 clipSpaceCorrMatrix;
-               vec2 texcoordAdjust;
-               vec2 renderSize;
-             } renderer;
-
-             out gl_PerVertex { vec4 gl_Position; };
-
-             void main()
-             {
-               vpos = position;
-               vec2 corr_pos = offset.xy + 0.05 * position.xy;
-               corr_pos.y *= renderer.renderSize.x / renderer.renderSize.y;
-               gl_Position = renderer.clipSpaceCorrMatrix * vec4(corr_pos, 0.0, 1.);
-             }
-         )_";
-  }
-};
-
-struct InstancedTexturedCube final : InstancedMesh
-{
-  static const constexpr float vertices[]
-      = {-1.0f, 1.0f,  0.0f,  -1.0f, -1.0f, 0.0f, 1.0f,  1.0f,
-         0.0f,  1.0f,  -1.0f, 0.0f,  -1.0f, 1.0f, -1.0f, -1.0f,
-         -1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f, -1.0f, -1.0f};
-
-  static const constexpr unsigned int indices[] = {
-      0, 2, 3, 0, 3, 1, 2, 6, 7, 2, 7, 3, 6, 4, 5, 6, 5, 7,
-      4, 0, 1, 4, 1, 5, 0, 4, 6, 0, 6, 2, 1, 5, 7, 1, 7, 3,
-  };
-
-  InstancedTexturedCube()
-      : InstancedMesh{vertices, 8}
-  {
-    indexArray = indices;
-    indexCount = sizeof(indices) / sizeof(unsigned int);
-  }
-
-  static const InstancedTexturedCube& instance() noexcept
-  {
-    static const InstancedTexturedCube t;
-    return t;
-  }
-};
-
-Node::Node()
-    : m_mesh{&InstancedTexturedCube::instance()}
-{
-  const char* frag = R"_(#version 450
-    layout(std140, binding = 0) uniform renderer_t {
-      mat4 clipSpaceCorrMatrix;
-      vec2 texcoordAdjust;
-      vec2 renderSize;
+    const QRhiCommandBuffer::VertexInput bindings[] = {
+        {&vtxData, 0},                      // vertex starts at offset zero
+        {&vtxData, 36 * 3 * sizeof(float)}, // texcoord starts after all the vertices
     };
 
-    layout(location = 0) in vec3 vpos;
-    layout(location = 0) out vec4 fragColor;
+    cb.setVertexInput(0, 2, bindings);
+  }
+};
 
-    void main ()
-    {
-      fragColor = vec4(vpos.xy * 0.01, 0., 1.);
-    }
-  )_";
+// Here we define basic shaders to display a textured cube with a camera
+static const constexpr auto vertex_shader = R"_(#version 450
+layout(location = 0) in vec3 position;
+layout(location = 1) in vec2 texcoord;
+
+layout(location = 1) out vec2 v_texcoord;
+layout(binding = 3) uniform sampler2D y_tex;
+
+layout(std140, binding = 0) uniform renderer_t {
+  mat4 clipSpaceCorrMatrix;
+  vec2 texcoordAdjust;
+  vec2 renderSize;
+};
+
+layout(std140, binding = 2) uniform model_t {
+  mat4 matrixModelViewProjection;
+  mat4 matrixModelView;
+  mat4 matrixModel;
+  mat4 matrixView;
+  mat4 matrixProjection;
+  mat3 matrixNormal;
+};
+
+out gl_PerVertex { vec4 gl_Position; };
+
+void main()
+{
+  v_texcoord = vec2(texcoord.x, texcoordAdjust.y + texcoordAdjust.x * texcoord.y);
+  gl_Position = clipSpaceCorrMatrix * matrixModelViewProjection * vec4(position, 1.0);
+}
+)_";
+
+static const constexpr auto fragment_shader = R"_(#version 450
+layout(std140, binding = 0) uniform renderer_t {
+  mat4 clipSpaceCorrMatrix;
+  vec2 texcoordAdjust;
+  vec2 renderSize;
+};
+
+layout(binding=3) uniform sampler2D y_tex;
+
+layout(location = 1) in vec2 v_texcoord;
+layout(location = 0) out vec4 fragColor;
+
+void main ()
+{
+  fragColor = texture(y_tex, v_texcoord.xy);
+  if(fragColor.a == 0.)
+    fragColor = vec4(v_texcoord.xy, 0., 1.);
+}
+)_";
+
+Node::Node()
+{
+  // This texture is provided by score
+  m_image = QImage(":/ossia-score.png");
+
+  // Load ubo address in m_materialData
+  m_materialData.reset((char*)&ubo);
+
+  // Generate the shaders
   std::tie(m_vertexS, m_fragmentS)
-      = score::gfx::makeShaders(m_mesh->defaultVertexShader(), frag);
+      = score::gfx::makeShaders(vertex_shader, fragment_shader);
+  SCORE_ASSERT(m_vertexS.isValid());
+  SCORE_ASSERT(m_fragmentS.isValid());
 
-  m_materialData.reset(new char[m_materialSize]);
-  std::fill_n(m_materialData.get(), m_materialSize, 0);
-
+  // Create an output port to indicate that this node
+  // draws something
   output.push_back(
       new score::gfx::Port{this, {}, score::gfx::Types::Image, {}});
 }
 
-Node::~Node() { }
-
-const score::gfx::Mesh& Node::mesh() const noexcept
+Node::~Node()
 {
-  return *this->m_mesh;
+  // We do not want to free m_materialData as it is
+  // not allocated dynamically
+  m_materialData.release();
 }
 
-struct Renderer : score::gfx::NodeRenderer
+// This header is used because some function names change between Qt 5 and Qt 6
+#include <Gfx/Qt5CompatPush> // clang-format: keep
+class Renderer : public score::gfx::GenericNodeRenderer
 {
-  struct Pass
-  {
-    QRhiSampler* sampler{};
-    score::gfx::TextureRenderTarget renderTarget;
-    score::gfx::Pipeline p;
-    QRhiBuffer* processUBO{};
-  };
-  std::array<Pass, 1> m_passes;
+public:
+  using GenericNodeRenderer::GenericNodeRenderer;
 
-  Node& n;
+private:
+  ~Renderer() { }
 
-  score::gfx::TextureRenderTarget m_rt;
-
-  std::vector<score::gfx::Sampler> m_samplers;
-
-  QRhiBuffer* m_meshBuffer{};
-  QRhiBuffer* m_idxBuffer{};
-  QRhiBuffer* particleOffsets{};
-  QRhiBuffer* particleSpeeds{};
-  bool particlesUploaded{};
-
-  QRhiBuffer* m_materialUBO{};
-  int64_t materialChangedIndex{-1};
-
-  QRhiComputePipeline* compute{};
-
-  Renderer(const Node& node) noexcept
-      : score::gfx::NodeRenderer{}
-      , n{const_cast<Node&>(node)}
-  {
-  }
-
-  virtual ~Renderer();
-  std::optional<QSize> renderTargetSize() const noexcept override
+  // This function is only useful to reimplement if the node has an
+  // input port (e.g. if it's an effect / filter / ...)
+  score::gfx::TextureRenderTarget
+  renderTargetForInput(const score::gfx::Port& p) override
   {
     return {};
   }
 
-  score::gfx::TextureRenderTarget
-  createRenderTarget(const score::gfx::RenderState& state)
+  // The pipeline is the object which contains all the state
+  // needed by the graphics card when issuing draw calls
+  score::gfx::Pipeline buildPipeline(
+      const score::gfx::RenderList& renderer,
+      const score::gfx::Mesh& mesh,
+      const QShader& vertexS,
+      const QShader& fragmentS,
+      const score::gfx::TextureRenderTarget& rt,
+      QRhiShaderResourceBindings* srb)
   {
-    auto sz = state.size;
-    if (auto true_sz = renderTargetSize())
-    {
-      sz = *true_sz;
-    }
+    auto& rhi = *renderer.state.rhi;
+    auto ps = rhi.newGraphicsPipeline();
+    ps->setName("Node::ps");
+    SCORE_ASSERT(ps);
 
-    m_rt = score::gfx::createRenderTarget(state, QRhiTexture::RGBA8, sz);
-    return m_rt;
+    // Set various graphics options
+    QRhiGraphicsPipeline::TargetBlend premulAlphaBlend;
+    premulAlphaBlend.enable = true;
+    ps->setTargetBlends({premulAlphaBlend});
+
+    ps->setSampleCount(1);
+
+    ps->setDepthTest(false);
+    ps->setDepthWrite(false);
+
+    // Matches the vertex data
+    ps->setTopology(QRhiGraphicsPipeline::Triangles);
+    ps->setCullMode(QRhiGraphicsPipeline::CullMode::Front);
+    ps->setFrontFace(QRhiGraphicsPipeline::FrontFace::CCW);
+
+    // Set the shaders used
+    ps->setShaderStages(
+        {{QRhiShaderStage::Vertex, vertexS},
+         {QRhiShaderStage::Fragment, fragmentS}});
+
+    // Set the mesh specification
+    QRhiVertexInputLayout inputLayout;
+    inputLayout.setBindings(
+        mesh.vertexInputBindings.begin(), mesh.vertexInputBindings.end());
+    inputLayout.setAttributes(
+        mesh.vertexAttributeBindings.begin(),
+        mesh.vertexAttributeBindings.end());
+    ps->setVertexInputLayout(inputLayout);
+
+    // Set the shader resources (input UBOs, samplers & textures...)
+    ps->setShaderResourceBindings(srb);
+
+    // Where we are rendering
+    SCORE_ASSERT(rt.renderPass);
+    ps->setRenderPassDescriptor(rt.renderPass);
+
+    SCORE_ASSERT(ps->create());
+    return {ps, srb};
   }
 
-  score::gfx::TextureRenderTarget renderTarget() const noexcept override
-  {
-    return m_rt;
-  }
-
-  score::gfx::Pipeline buildPassPipeline(
-      score::gfx::RenderList& renderer,
-      score::gfx::TextureRenderTarget tgt,
-      QRhiBuffer* processUBO)
-  {
-
-    auto buildPipeline = [](const score::gfx::RenderList& renderer,
-                            const score::gfx::Mesh& mesh,
-                            const QShader& vertexS,
-                            const QShader& fragmentS,
-                            const score::gfx::TextureRenderTarget& rt,
-                            QRhiBuffer* m_processUBO,
-                            QRhiBuffer* m_materialUBO,
-                            const std::vector<score::gfx::Sampler>& samplers)
-    {
-      auto& rhi = *renderer.state.rhi;
-      auto ps = rhi.newGraphicsPipeline();
-      SCORE_ASSERT(ps);
-
-      QRhiGraphicsPipeline::TargetBlend premulAlphaBlend;
-      premulAlphaBlend.enable = true;
-      premulAlphaBlend.srcColor = QRhiGraphicsPipeline::One;
-      premulAlphaBlend.dstColor = QRhiGraphicsPipeline::One;
-      premulAlphaBlend.opColor = QRhiGraphicsPipeline::Add;
-      premulAlphaBlend.srcAlpha = QRhiGraphicsPipeline::One;
-      premulAlphaBlend.dstAlpha = QRhiGraphicsPipeline::One;
-      premulAlphaBlend.opAlpha = QRhiGraphicsPipeline::Add;
-      ps->setTargetBlends({premulAlphaBlend});
-
-      ps->setSampleCount(1);
-
-      ps->setDepthTest(false);
-      ps->setDepthWrite(false);
-
-      ps->setShaderStages(
-          {{QRhiShaderStage::Vertex, vertexS},
-           {QRhiShaderStage::Fragment, fragmentS}});
-
-      QRhiVertexInputLayout inputLayout;
-      inputLayout.setBindings(
-          mesh.vertexInputBindings.begin(), mesh.vertexInputBindings.end());
-      inputLayout.setAttributes(
-          mesh.vertexAttributeBindings.begin(),
-          mesh.vertexAttributeBindings.end());
-      ps->setVertexInputLayout(inputLayout);
-
-      // Shader resource bindings
-      auto srb = rhi.newShaderResourceBindings();
-      SCORE_ASSERT(srb);
-
-      QVector<QRhiShaderResourceBinding> bindings;
-
-      const auto bindingStages = QRhiShaderResourceBinding::VertexStage
-                                 | QRhiShaderResourceBinding::FragmentStage;
-
-      {
-        const auto rendererBinding = QRhiShaderResourceBinding::uniformBuffer(
-            0, bindingStages, &renderer.outputUBO());
-        bindings.push_back(rendererBinding);
-      }
-
-      {
-        const auto standardUniformBinding
-            = QRhiShaderResourceBinding::uniformBuffer(
-                1, bindingStages, m_processUBO);
-        bindings.push_back(standardUniformBinding);
-      }
-
-      // Bind materials
-      if (m_materialUBO)
-      {
-        const auto materialBinding = QRhiShaderResourceBinding::uniformBuffer(
-            2, bindingStages, m_materialUBO);
-        bindings.push_back(materialBinding);
-      }
-
-      // Bind samplers
-      srb->setBindings(bindings.begin(), bindings.end());
-      SCORE_ASSERT(srb->build());
-
-      ps->setShaderResourceBindings(srb);
-
-      SCORE_ASSERT(rt.renderPass);
-      ps->setRenderPassDescriptor(rt.renderPass);
-
-      SCORE_ASSERT(ps->build());
-      return score::gfx::Pipeline{ps, srb};
-    };
-
-    return buildPipeline(
-        renderer,
-        n.mesh(),
-        n.m_vertexS,
-        n.m_fragmentS,
-        tgt,
-        processUBO,
-        m_materialUBO,
-        m_samplers);
-  };
-
-  float data[instances * 3];
-  float speed[instances * 3];
   void init(score::gfx::RenderList& renderer) override
   {
-    QRhi& rhi = *renderer.state.rhi;
+    const auto& mesh = TexturedCube::instance();
 
-    if (!m_rt.renderTarget)
-      createRenderTarget(renderer.state);
-    // init()
+    // Load the mesh data into the GPU
     {
-      const auto& mesh = n.mesh();
-      if (!particleOffsets)
-      {
-        particleOffsets = rhi.newBuffer(
-            QRhiBuffer::Immutable,
-            QRhiBuffer::VertexBuffer | QRhiBuffer::StorageBuffer,
-            instances * 2 * sizeof(float));
-        SCORE_ASSERT(particleOffsets->build());
-        particleSpeeds = rhi.newBuffer(
-            QRhiBuffer::Immutable,
-            QRhiBuffer::StorageBuffer,
-            instances * 2 * sizeof(float));
-        SCORE_ASSERT(particleSpeeds->build());
-      }
-      if (!m_meshBuffer)
-      {
-        auto [mbuffer, ibuffer] = renderer.initMeshBuffer(mesh);
-        m_meshBuffer = mbuffer;
-        m_idxBuffer = ibuffer;
-      }
+      auto [mbuffer, ibuffer] = renderer.initMeshBuffer(mesh);
+      m_meshBuffer = mbuffer;
+      m_idxBuffer = ibuffer;
     }
 
-    if (m_materialSize > 0)
+    // Initialize the Process UBO (provides timing information, etc.)
     {
-      m_materialUBO = rhi.newBuffer(
-          QRhiBuffer::Dynamic, QRhiBuffer::UniformBuffer, m_materialSize);
-      SCORE_ASSERT(m_materialUBO->build());
+      processUBOInit(renderer);
     }
 
-    // Last pass is the main write
+    // Initialize our camera
     {
-      QRhiBuffer* pubo{};
-      pubo = rhi.newBuffer(
+      m_material.size = sizeof(score::gfx::ModelCameraUBO);
+      m_material.buffer = renderer.state.rhi->newBuffer(
           QRhiBuffer::Dynamic,
           QRhiBuffer::UniformBuffer,
-          sizeof(score::gfx::ProcessUBO));
-      pubo->build();
-
-      auto p = buildPassPipeline(renderer, m_rt, pubo);
-      m_passes[0] = Pass{nullptr, m_rt, p, pubo};
+          sizeof(score::gfx::ModelCameraUBO));
+      SCORE_ASSERT(m_material.buffer->create());
     }
 
+    auto& n = static_cast<const Node&>(this->node);
+    auto& rhi = *renderer.state.rhi;
+
+    // Create GPU textures for the image
+    const QSize sz = n.m_image.size();
+    m_texture = rhi.newTexture(
+        QRhiTexture::BGRA8,
+        QSize{sz.width(), sz.height()},
+        1,
+        QRhiTexture::Flag{});
+
+    m_texture->setName("Node::tex");
+    m_texture->create();
+
+    // Create the sampler in which we are going to put the texture
     {
-      QString comp = QString(R"_(#version 450
-layout (local_size_x = 256) in;
+      auto sampler = rhi.newSampler(
+          QRhiSampler::Linear,
+          QRhiSampler::Linear,
+          QRhiSampler::None,
+          QRhiSampler::Repeat,
+          QRhiSampler::Repeat);
 
-struct Pos
-{
-    vec2 pos;
-};
-struct Speed
-{
-    vec2 spd;
-};
-
-layout(std140, binding = 0) buffer PBuf
-{
-    Pos d[];
-} pbuf;
-layout(std140, binding = 1) buffer SBuf
-{
-    Speed d[];
-} sbuf;
-
-void main()
-{
-    uint index = gl_GlobalInvocationID.x;
-    if (index < %1) {
-        vec2 p = pbuf.d[index].pos;
-        vec2 s = sbuf.d[index].spd;
-
-        p += s;
-
-        pbuf.d[index].pos = p;
+      sampler->setName("Node::sampler");
+      sampler->create();
+      m_samplers.push_back({sampler, m_texture});
     }
-}
-)_")
-                         .arg(instances);
-      QShader computeShader = score::gfx::makeCompute(comp);
-      compute = rhi.newComputePipeline();
+    SCORE_ASSERT(n.m_vertexS.isValid());
+    SCORE_ASSERT(n.m_fragmentS.isValid());
 
-      auto csrb = rhi.newShaderResourceBindings();
+    // Create the rendering pipelines for each output of this node.
+    for (score::gfx::Edge* edge : this->node.output[0]->edges)
+    {
+      auto rt = renderer.renderTargetForOutput(*edge);
+      if (rt.renderTarget)
       {
-        QRhiShaderResourceBinding bindings[2] = {
-            QRhiShaderResourceBinding::bufferLoadStore(
-                0, QRhiShaderResourceBinding::ComputeStage, particleOffsets),
-            QRhiShaderResourceBinding::bufferLoadStore(
-                1, QRhiShaderResourceBinding::ComputeStage, particleSpeeds)};
-
-        csrb->setBindings(bindings, bindings + 2);
-        SCORE_ASSERT(csrb->build());
+        auto bindings = createDefaultBindings(
+            renderer, rt, m_processUBO, m_material.buffer, m_samplers);
+        auto pipeline = buildPipeline(
+            renderer, mesh, n.m_vertexS, n.m_fragmentS, rt, bindings);
+        m_p.emplace_back(edge, pipeline);
       }
-      compute->setShaderResourceBindings(csrb);
-      compute->setShaderStage(
-          QRhiShaderStage(QRhiShaderStage::Compute, computeShader));
-      SCORE_ASSERT(compute->build());
     }
   }
 
+  int m_rotationCount = 0;
   void update(score::gfx::RenderList& renderer, QRhiResourceUpdateBatch& res)
       override
   {
-    if (m_materialUBO && m_materialSize > 0
-        && materialChangedIndex != n.materialChanged)
+    auto& n = static_cast<const Node&>(this->node);
     {
-      char* data = n.m_materialData.get();
-      res.updateDynamicBuffer(m_materialUBO, 0, m_materialSize, data);
-      materialChangedIndex = n.materialChanged;
+      // Set up a basic camera
+      auto& ubo = (score::gfx::ModelCameraUBO&)n.ubo;
+
+      // We use the Qt class QMatrix4x4 as an utility
+      // as it provides everything needed for projection transformations
+
+      // Our object rotates in a very crude way
+      QMatrix4x4 model;
+      model.scale(0.25);
+      model.rotate(m_rotationCount++, QVector3D(1, 1, 1));
+
+      // The camera and viewports are fixed
+      QMatrix4x4 view;
+      view.lookAt(QVector3D{0, 0, 1}, QVector3D{0, 0, 0}, QVector3D{0, 1, 0});
+
+      QMatrix4x4 projection;
+      projection.perspective(90, 16. / 9., 0.001, 1000.);
+
+      QMatrix4x4 mv = view * model;
+      QMatrix4x4 mvp = projection * mv;
+      QMatrix3x3 norm = model.normalMatrix();
+
+      score::gfx::copyMatrix(mvp, ubo.mvp);
+      score::gfx::copyMatrix(mv, ubo.mv);
+      score::gfx::copyMatrix(model, ubo.model);
+      score::gfx::copyMatrix(view, ubo.view);
+      score::gfx::copyMatrix(projection, ubo.projection);
+      score::gfx::copyMatrix(norm, ubo.modelNormal);
+
+      // Send the camera UBO to the graphics card
+      res.updateDynamicBuffer(m_material.buffer, 0, m_material.size, &ubo);
     }
 
-    {
-      // Update all the process UBOs
-      {
-        n.standardUBO.passIndex = 0;
-        res.updateDynamicBuffer(
-            m_passes[0].processUBO,
-            0,
-            sizeof(score::gfx::ProcessUBO),
-            &this->n.standardUBO);
-      }
-    }
+    // Update the process UBO (indicates timing)
+    res.updateDynamicBuffer(
+        m_processUBO, 0, sizeof(score::gfx::ProcessUBO), &this->node.standardUBO);
 
-    if (!particlesUploaded)
+    // If images haven't been uploaded yet, upload them.
+    if (!m_uploaded)
     {
-      for (int i = 0; i < instances * 3; i++)
-      {
-        data[i] = 2 * double(rand()) / RAND_MAX - 1;
-        speed[i] = (2 * double(rand()) / RAND_MAX - 1) * 0.001;
-      }
-
-      res.uploadStaticBuffer(
-          particleOffsets, 0, instances * 2 * sizeof(float), data);
-      res.uploadStaticBuffer(
-          particleSpeeds, 0, instances * 2 * sizeof(float), speed);
-      particlesUploaded = true;
+      res.uploadTexture(m_texture, n.m_image);
+      m_uploaded = true;
     }
   }
 
-  void releaseWithoutRenderTarget(score::gfx::RenderList& r) override
-  {
-    {
-      delete m_passes.back().p.pipeline;
-      delete m_passes.back().p.srb;
-      delete m_passes.back().processUBO;
-    }
-
-    for (auto sampler : m_samplers)
-    {
-      delete sampler.sampler;
-      // texture isdeleted elsewxheree
-    }
-    m_samplers.clear();
-
-    delete m_materialUBO;
-    m_materialUBO = nullptr;
-
-    m_meshBuffer = nullptr;
-  }
-
-  void release(score::gfx::RenderList& r) override
-  {
-    releaseWithoutRenderTarget(r);
-    m_rt.release();
-  }
-
-  void runPass(
+  // Everything is set up, we can render our mesh
+  QRhiResourceUpdateBatch* runRenderPass(
       score::gfx::RenderList& renderer,
       QRhiCommandBuffer& cb,
-      QRhiResourceUpdateBatch& res) override
+      score::gfx::Edge& edge) override
   {
-    // Update a first time everything
-
-    // PASSINDEX must be set to the last index
-    // FIXME
-    n.standardUBO.passIndex = m_passes.size() - 1;
-
-    update(renderer, res);
-
-    auto updateBatch = &res;
-
-    // Draw the passes
-    const auto& pass = m_passes[0];
-    {
-      SCORE_ASSERT(pass.renderTarget.renderTarget);
-      SCORE_ASSERT(pass.p.pipeline);
-      SCORE_ASSERT(pass.p.srb);
-      // TODO : combine all the uniforms..
-
-      auto rt = pass.renderTarget.renderTarget;
-      auto pipeline = pass.p.pipeline;
-      auto srb = pass.p.srb;
-      auto texture = pass.renderTarget.texture;
-
-      // TODO need to free stuff
-      if (compute)
-      {
-        cb.beginComputePass(updateBatch);
-        cb.setComputePipeline(compute);
-        cb.setShaderResources(compute->shaderResourceBindings());
-        cb.dispatch(instances / 256, 1, 1);
-        cb.endComputePass();
-      }
-
-      cb.beginPass(rt, Qt::black, {1.0f, 0});
-      {
-        cb.setGraphicsPipeline(pipeline);
-        cb.setShaderResources(srb);
-
-        if (texture)
-        {
-          cb.setViewport(QRhiViewport(
-              0,
-              0,
-              texture->pixelSize().width(),
-              texture->pixelSize().height()));
-        }
-        else
-        {
-          const auto sz = renderer.state.size;
-          cb.setViewport(QRhiViewport(0, 0, sz.width(), sz.height()));
-        }
-
-        assert(this->m_meshBuffer);
-        assert(this->m_meshBuffer->usage().testFlag(QRhiBuffer::VertexBuffer));
-
-        const QRhiCommandBuffer::VertexInput bindings[]
-            = {{this->m_meshBuffer, 0}, {this->particleOffsets, 0}};
-
-        cb.setVertexInput(
-            0,
-            2,
-            bindings,
-            this->m_idxBuffer,
-            0,
-            QRhiCommandBuffer::IndexFormat::IndexUInt32);
-
-        cb.drawIndexed(n.mesh().indexCount, instances);
-      }
-      cb.endPass();
-    }
+    const auto& mesh = TexturedCube::instance();
+    defaultRenderPass(renderer, mesh, cb, edge);
+    return nullptr;
   }
+
+  // Free resources allocated in this class
+  void release(score::gfx::RenderList& r) override
+  {
+    m_texture->deleteLater();
+    m_texture = nullptr;
+
+    // This will free all the other resources - material & process UBO, etc
+    defaultRelease(r);
+  }
+
+  QRhiTexture* m_texture{};
+  bool m_uploaded = false;
 };
+#include <Gfx/Qt5CompatPop> // clang-format: keep
 
 score::gfx::NodeRenderer*
 Node::createRenderer(score::gfx::RenderList& r) const noexcept
 {
   return new Renderer{*this};
 }
-
-Renderer::~Renderer() { }
 }
