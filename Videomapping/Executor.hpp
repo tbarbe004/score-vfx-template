@@ -9,7 +9,7 @@ class Model;
 class ProcessExecutorComponent final
     : public Execution::ProcessComponent_T<MyVfx::Model, ossia::node_process>
 {
-  COMPONENT_METADATA("00000000-0000-0000-0000-000000000000")
+  COMPONENT_METADATA("fc5249c6-7ba3-4849-be2c-3141b6293a68")
 public:
   ProcessExecutorComponent(
       Model& element,

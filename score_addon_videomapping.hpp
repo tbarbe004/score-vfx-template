@@ -16,7 +16,7 @@ class score_addon_my_vfx final
     : public score::Plugin_QtInterface
     , public score::FactoryInterface_QtInterface
 {
-  SCORE_PLUGIN_METADATA(1, "00000000-0000-0000-0000-000000000000")
+  SCORE_PLUGIN_METADATA(1, "f51dfa2e-6e13-4dd1-989b-7553e6378437")
 
 public:
   score_addon_my_vfx();

@@ -9,7 +9,7 @@ class Model;
 PROCESS_METADATA(
     ,
     MyVfx::Model,
-    "00000000-0000-0000-0000-000000000000",
+    "16a7d649-4878-4496-90ea-8c1a8c7cc408",
     "MyVfx",                           // Internal name
     "MyVfx",                           // Pretty name
     Process::ProcessCategory::Visual,  // Category
