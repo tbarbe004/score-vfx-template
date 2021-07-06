@@ -22,24 +22,15 @@ struct TexturedCube final : score::gfx::Mesh
       float x, y;
     };
 
-    static constexpr const unsigned int indices[6 * 6] = {
-        0, 1, 3, 3, 1, 2, //
-        1, 5, 2, 2, 5, 6, //
-        5, 4, 6, 6, 4, 7, //
-        4, 0, 7, 7, 0, 3, //
-        3, 2, 7, 7, 2, 6, //
-        4, 5, 0, 0, 5, 1  //
+    static constexpr const unsigned int indices[6] = {
+        0, 1, 3, 3, 1, 2
     };
 
-    static constexpr const vec3 vertices[8]
-        = {{-1., -1., -1.}, //
-           {1., -1., -1.},  //
-           {1., 1., -1.},   //
-           {-1., 1., -1.},  //
-           {-1., -1., 1.},  //
-           {1., -1., 1.},   //
-           {1., 1., 1.},    //
-           {-1., 1., 1.}};
+    static constexpr const vec3 vertices[4]
+        = {{-4., 1., -1.}, //
+           {1., 0., -1.},  //
+           {1., 3., 1.},   //
+           {-2., 3., 1.}};
 
     static constexpr const vec2 texCoords[4]
         = {{0, 0}, //
@@ -58,11 +49,11 @@ struct TexturedCube final : score::gfx::Mesh
     static constexpr const int texInds[6] = {0, 1, 3, 3, 1, 2};
 
     std::vector<float> meshBuf;
-    meshBuf.reserve(36 * 3 + 36 * 2 + 36 * 3);
+    meshBuf.reserve(6 * 3 + 6 * 2 + 6 * 3);
 
     // The beginning of the buffer is:
     // [ {x y z} {x y z} {x y z} ... ]
-    for (int i = 0; i < 36; i++)
+    for (int i = 0; i < 6; i++)
     {
       meshBuf.push_back(vertices[indices[i]].x);
       meshBuf.push_back(vertices[indices[i]].y);
@@ -70,14 +61,14 @@ struct TexturedCube final : score::gfx::Mesh
     }
 
     // Then we store the texcoords at the end: [ {u v} {u v} {u v} ... ]
-    for (int i = 0; i < 36; i++)
+    for (int i = 0; i < 6; i++)
     {
       meshBuf.push_back(texCoords[texInds[i % 6]].x);
       meshBuf.push_back(texCoords[texInds[i % 6]].y);
     }
 
     // Then the normals (unused in this example)
-    for (int i = 0; i < 36; i++)
+    for (int i = 0; i < 6; i++)
     {
       meshBuf.push_back(normals[indices[i / 6]].x);
       meshBuf.push_back(normals[indices[i / 6]].y);
@@ -116,7 +107,7 @@ struct TexturedCube final : score::gfx::Mesh
     // These variables are used by score to upload the texture
     // and send the draw call automatically
     vertexArray = mesh;
-    vertexCount = 36;
+    vertexCount = 6;
 
     // Note: if we had an interleaved mesh, where the data is stored like
     // [ { x y z u v } { x y z u v } { x y z u v } ] ...
@@ -158,7 +149,7 @@ struct TexturedCube final : score::gfx::Mesh
   {
     const QRhiCommandBuffer::VertexInput bindings[] = {
         {&vtxData, 0},                      // vertex starts at offset zero
-        {&vtxData, 36 * 3 * sizeof(float)}, // texcoord starts after all the vertices
+        {&vtxData, 6 * 3 * sizeof(float)}, // texcoord starts after all the vertices
     };
 
     cb.setVertexInput(0, 2, bindings);
@@ -211,9 +202,7 @@ layout(location = 0) out vec4 fragColor;
 
 void main ()
 {
-  fragColor = texture(y_tex, v_texcoord.xy);
-  if(fragColor.a == 0.)
-    fragColor = vec4(v_texcoord.xy, 0., 1.);
+  fragColor = vec4(1, 1, 1, 1);
 }
 )_";
 
