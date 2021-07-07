@@ -3,9 +3,9 @@
 #include <Effect/EffectFactory.hpp>
 #include <Process/GenericProcessFactory.hpp>
 
-#include <MyVfx/Process.hpp>
+#include <Videomapping/Process.hpp>
 
-namespace MyVfx
+namespace Videomapping
 {
-using LayerFactory = Process::GenericDefaultLayerFactory<MyVfx::Model>;
+using LayerFactory = Process::GenericDefaultLayerFactory<Videomapping::Model>;
 }

@@ -3,7 +3,7 @@
 #include <Gfx/Graph/RenderList.hpp>
 #include <Gfx/Graph/CommonUBOs.hpp>
 
-namespace MyVfx
+namespace Videomapping
 {
 class Renderer;
 class Node : public score::gfx::NodeModel

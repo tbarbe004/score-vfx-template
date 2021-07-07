@@ -4,7 +4,7 @@
 
 #include <score/tools/Debug.hpp>
 
-namespace MyVfx
+namespace Videomapping
 {
 /** Here we define a mesh fairly manually and in a fairly suboptimal way
  * (based on this: https://pastebin.com/DXKEmvap)
@@ -27,10 +27,10 @@ struct TexturedCube final : score::gfx::Mesh
     };
 
     static constexpr const vec3 vertices[4]
-        = {{-4., 1., -1.}, //
-           {1., 0., -1.},  //
-           {1., 3., 1.},   //
-           {-2., 3., 1.}};
+        = {{1., 0., -1.},
+           {-4., 1., -1.},   //
+           {-2., 3., 1.},
+           {1., 3., 1.}};
 
     static constexpr const vec2 texCoords[4]
         = {{0, 0}, //
@@ -377,7 +377,7 @@ private:
     }
   }
 
-  int m_rotationCount = 0;
+  //int m_rotationCount = 0;
   void update(score::gfx::RenderList& renderer, QRhiResourceUpdateBatch& res)
       override
   {
@@ -391,8 +391,8 @@ private:
 
       // Our object rotates in a very crude way
       QMatrix4x4 model;
-      model.scale(0.25);
-      model.rotate(m_rotationCount++, QVector3D(1, 1, 1));
+      model.scale(0.1);
+      //model.rotate(m_rotationCount++, QVector3D(0, 0, 0));
 
       // The camera and viewports are fixed
       QMatrix4x4 view;

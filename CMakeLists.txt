@@ -9,31 +9,31 @@ if(NOT TARGET score_plugin_gfx)
   return()
 endif()
 
-project(score_addon_my_vfx LANGUAGES CXX)
+project(score_addon_videomapping LANGUAGES CXX)
 
 # General initialization
 score_common_setup()
 
 # Creation of the library
-add_library(score_addon_my_vfx
-  MyVfx/Executor.hpp
-  MyVfx/Metadata.hpp
-  MyVfx/Process.hpp
-  MyVfx/Layer.hpp
-  MyVfx/Executor.cpp
-  MyVfx/Process.cpp
-  MyVfx/Node.hpp
-  MyVfx/Node.cpp
+add_library(score_addon_videomapping
+  Videomapping/Executor.hpp
+  Videomapping/Metadata.hpp
+  Videomapping/Process.hpp
+  Videomapping/Layer.hpp
+  Videomapping/Executor.cpp
+  Videomapping/Process.cpp
+  Videomapping/Node.hpp
+  Videomapping/Node.cpp
 
-  score_addon_my_vfx.hpp
-  score_addon_my_vfx.cpp
+  score_addon_videomapping.hpp
+  score_addon_videomapping.cpp
 )
 
 # Link
-target_link_libraries(score_addon_my_vfx PUBLIC
+target_link_libraries(score_addon_videomapping PUBLIC
   score_plugin_gfx
 )
 
 # Target-specific options
-setup_score_plugin(score_addon_my_vfx)
+setup_score_plugin(score_addon_videomapping)
 
