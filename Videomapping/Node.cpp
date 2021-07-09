@@ -1,7 +1,7 @@
 #include "Node.hpp"
 
 #include <Gfx/Graph/NodeRenderer.hpp>
-
+#include <Gfx/Graph/RenderedISFNode.hpp>
 #include <score/tools/Debug.hpp>
 
 namespace Videomapping
@@ -80,6 +80,8 @@ struct TexturedCube final : score::gfx::Mesh
 
   // Generate our mesh data
   const std::vector<float> mesh = generateCubeMesh();
+
+
 
   explicit TexturedCube()
   {
@@ -248,7 +250,7 @@ private:
   score::gfx::TextureRenderTarget
   renderTargetForInput(const score::gfx::Port& p) override
   {
-    return {};
+      return {};
   }
 
   // The pipeline is the object which contains all the state
@@ -305,6 +307,8 @@ private:
     SCORE_ASSERT(ps->create());
     return {ps, srb};
   }
+
+const TexturedCube& mesh2 = TexturedCube::instance();
 
   void init(score::gfx::RenderList& renderer) override
   {
@@ -389,14 +393,53 @@ private:
       // We use the Qt class QMatrix4x4 as an utility
       // as it provides everything needed for projection transformations
 
+      // We first compute the min/max to place correctly the camera
+
+      float x_min = mesh2.vertexArray[0];
+      float x_max = mesh2.vertexArray[0];
+      float y_min = mesh2.vertexArray[1];
+      float y_max = mesh2.vertexArray[1];
+      float z_min = mesh2.vertexArray[2];
+      float z_max = mesh2.vertexArray[2];
+
+      for (int i = 1; i < 4; i++){
+          if (x_min > mesh2.vertexArray[i*3]){
+              x_min = mesh2.vertexArray[i*3];
+          }
+          if (x_max < mesh2.vertexArray[i*3]){
+              x_max = mesh2.vertexArray[i*3];
+          }
+          if (y_min > mesh2.vertexArray[i*3 + 1]){
+              y_min = mesh2.vertexArray[i*3 + 1];
+          }
+          if (y_max < mesh2.vertexArray[i*3 + 1]){
+              y_max = mesh2.vertexArray[i*3 + 1];
+          }
+          if (z_min < mesh2.vertexArray[i*3 + 2]){
+              z_min = mesh2.vertexArray[i*3 + 2];
+          }
+          if (z_max > mesh2.vertexArray[i*3 + 2]){
+              z_max = mesh2.vertexArray[i*3 + 2];
+          }
+      }
+
+      float x_ratio = x_max - x_min;
+      float y_ratio = y_max - y_min;
+      //float z_ratio = z_max - z_min;
+
+      float x_midpoint = (x_max + x_min) /2.;
+      float y_midpoint = (y_max + y_min) /2.;
+      float z_midpoint = (z_max + z_min) /2.;
+
+
       // Our object rotates in a very crude way
       QMatrix4x4 model;
-      model.scale(0.1);
+      model.scale(3 / std::max(x_ratio, y_ratio));
       //model.rotate(m_rotationCount++, QVector3D(0, 0, 0));
 
       // The camera and viewports are fixed
       QMatrix4x4 view;
-      view.lookAt(QVector3D{0, 0, 1}, QVector3D{0, 0, 0}, QVector3D{0, 1, 0});
+      view.lookAt(QVector3D{x_min, y_min, z_max + 1}, QVector3D{x_midpoint, y_midpoint, z_midpoint}, QVector3D{0, 1, 0});
 
       QMatrix4x4 projection;
       projection.perspective(90, 16. / 9., 0.001, 1000.);
