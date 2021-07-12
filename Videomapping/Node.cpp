@@ -439,7 +439,11 @@ const TexturedCube& mesh2 = TexturedCube::instance();
 
       // The camera and viewports are fixed
       QMatrix4x4 view;
-      view.lookAt(QVector3D{x_min, y_min, z_max + 1}, QVector3D{x_midpoint, y_midpoint, z_midpoint}, QVector3D{0, 1, 0});
+      QVector3D up{0, 1, 0};
+      QVector3D cameraDirection{x_midpoint - x_min, y_midpoint - y_min, z_midpoint - z_max - 1};
+      QVector3D cameraRight = QVector3D::crossProduct(up, cameraDirection);
+      cameraRight.normalize();
+      view.lookAt(QVector3D{x_min, y_min, z_max + 1}, QVector3D{x_midpoint, y_midpoint, z_midpoint}, QVector3D::crossProduct(cameraDirection, cameraRight));
 
       QMatrix4x4 projection;
       projection.perspective(90, 16. / 9., 0.001, 1000.);
