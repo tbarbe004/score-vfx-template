@@ -3,6 +3,7 @@
 #include <Gfx/Graph/NodeRenderer.hpp>
 #include <Gfx/Graph/RenderedISFNode.hpp>
 #include <score/tools/Debug.hpp>
+#include <Gfx/Graph/Utils.hpp>
 
 namespace Videomapping
 {
@@ -222,6 +223,13 @@ Node::Node()
   SCORE_ASSERT(m_vertexS.isValid());
   SCORE_ASSERT(m_fragmentS.isValid());
 
+  // Create an input port to indicate that this node
+  // take a video as entry
+
+  input.push_back(
+      new score::gfx::Port{this, {}, score::gfx::Types::Image, {}});
+
+
   // Create an output port to indicate that this node
   // draws something
   output.push_back(
@@ -250,7 +258,7 @@ private:
   score::gfx::TextureRenderTarget
   renderTargetForInput(const score::gfx::Port& p) override
   {
-      return {};
+      return createRenderTarget(this->m_render_state, this->m_texture);
   }
 
   // The pipeline is the object which contains all the state
@@ -361,7 +369,8 @@ const TexturedCube& mesh2 = TexturedCube::instance();
 
       sampler->setName("Node::sampler");
       sampler->create();
-      m_samplers.push_back({sampler, m_texture});
+      //m_samplers.push_back({sampler, m_texture});
+      m_samplers.push_back({sampler, renderTargetForInput(*this->node.input[0]).texture});
     }
     SCORE_ASSERT(n.m_vertexS.isValid());
     SCORE_ASSERT(n.m_fragmentS.isValid());
@@ -379,6 +388,10 @@ const TexturedCube& mesh2 = TexturedCube::instance();
         m_p.emplace_back(edge, pipeline);
       }
     }
+
+    // Initialize the renderState needed for renderTargetForInput
+
+    m_render_state = renderer.state;
   }
 
   //int m_rotationCount = 0;
@@ -497,6 +510,7 @@ const TexturedCube& mesh2 = TexturedCube::instance();
   }
 
   QRhiTexture* m_texture{};
+  score::gfx::RenderState m_render_state{};
   bool m_uploaded = false;
 };
 #include <Gfx/Qt5CompatPop> // clang-format: keep

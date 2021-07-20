@@ -20,5 +20,7 @@ private:
 
   friend Renderer;
   QImage m_image;
+  score::gfx::RenderState* rend_state;
+  QRhiTexture* tex;
 };
 }
