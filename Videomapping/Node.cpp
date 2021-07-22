@@ -10,9 +10,9 @@ namespace Videomapping
 /** Here we define a mesh fairly manually and in a fairly suboptimal way
  * (based on this: https://pastebin.com/DXKEmvap)
  */
-struct TexturedCube final : score::gfx::Mesh
+struct ModifiedVideo final : score::gfx::Mesh
 {
-  static std::vector<float> generateCubeMesh() noexcept
+  static std::vector<float> generateModifiedVideo() noexcept
   {
     struct vec3
     {
@@ -80,11 +80,11 @@ struct TexturedCube final : score::gfx::Mesh
   }
 
   // Generate our mesh data
-  const std::vector<float> mesh = generateCubeMesh();
+  const std::vector<float> mesh = generateModifiedVideo();
 
 
 
-  explicit TexturedCube()
+  explicit ModifiedVideo()
   {
     // Our mesh's attribute data is not interleaved, thus
     // we have multiple bindings stored in the same buffer:
@@ -133,10 +133,10 @@ struct TexturedCube final : score::gfx::Mesh
   }
 
   // Utility singleton
-  static const TexturedCube& instance() noexcept
+  static const ModifiedVideo& instance() noexcept
   {
-    static const TexturedCube cube;
-    return cube;
+    static const ModifiedVideo modifiedVideo;
+    return modifiedVideo;
   }
 
   // Ignore this function
@@ -159,7 +159,7 @@ struct TexturedCube final : score::gfx::Mesh
   }
 };
 
-// Here we define basic shaders to display a textured cube with a camera
+// Here we define basic shaders to display a textured screen with a camera
 static const constexpr auto vertex_shader = R"_(#version 450
 layout(location = 0) in vec3 position;
 layout(location = 1) in vec2 texcoord;
@@ -205,7 +205,9 @@ layout(location = 0) out vec4 fragColor;
 
 void main ()
 {
-  fragColor = vec4(1, 1, 1, 1);
+  fragColor = texture(y_tex, v_texcoord.xy);
+  if(fragColor.a == 0.)
+    fragColor = vec4(v_texcoord.xy, 0., 1.);
 }
 )_";
 
@@ -316,11 +318,11 @@ private:
     return {ps, srb};
   }
 
-const TexturedCube& mesh2 = TexturedCube::instance();
+const ModifiedVideo& mesh2 = ModifiedVideo::instance();
 
   void init(score::gfx::RenderList& renderer) override
   {
-    const auto& mesh = TexturedCube::instance();
+    const auto& mesh = ModifiedVideo::instance();
 
     // Load the mesh data into the GPU
     {
@@ -357,6 +359,8 @@ const TexturedCube& mesh2 = TexturedCube::instance();
 
     m_texture->setName("Node::tex");
     m_texture->create();
+
+
 
     // Create the sampler in which we are going to put the texture
     {
@@ -494,7 +498,7 @@ const TexturedCube& mesh2 = TexturedCube::instance();
       QRhiCommandBuffer& cb,
       score::gfx::Edge& edge) override
   {
-    const auto& mesh = TexturedCube::instance();
+    const auto& mesh = ModifiedVideo::instance();
     defaultRenderPass(renderer, mesh, cb, edge);
     return nullptr;
   }

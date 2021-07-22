@@ -22,6 +22,7 @@ public:
   mesh_node(Gfx::GfxExecutionAction& ctx)
       : gfx_exec_node{ctx}
   {
+    root_inputs().push_back(new ossia::texture_inlet);
     root_outputs().push_back(new ossia::texture_outlet);
 
     auto n = std::make_unique<Videomapping::Node>();
