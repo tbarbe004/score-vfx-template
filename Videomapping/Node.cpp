@@ -29,7 +29,7 @@ struct ModifiedVideo final : score::gfx::Mesh
 
     static constexpr const vec3 vertices[4]
         = {{1., 0., -1.},
-           {-4., 1., -1.},   //
+           {-4., 1., -1.}, //
            {-2., 3., 1.},
            {1., 3., 1.}};
 
@@ -207,14 +207,14 @@ void main ()
 {
   fragColor = texture(y_tex, v_texcoord.xy);
   if(fragColor.a == 0.)
-    fragColor = vec4(v_texcoord.xy, 0., 1.);
+    fragColor = vec4(fragColor.xy, 0., 1.);
 }
 )_";
 
 Node::Node()
 {
   // This texture is provided by score
-  m_image = QImage(":/ossia-score.png");
+  //m_image = QImage(":/ossia-score.png");
 
   // Load ubo address in m_materialData
   m_materialData.reset((char*)&ubo);
@@ -260,7 +260,7 @@ private:
   score::gfx::TextureRenderTarget
   renderTargetForInput(const score::gfx::Port& p) override
   {
-      return createRenderTarget(this->m_render_state, this->m_texture);
+      return this->rend_target;
   }
 
   // The pipeline is the object which contains all the state
@@ -360,6 +360,7 @@ const ModifiedVideo& mesh2 = ModifiedVideo::instance();
     m_texture->setName("Node::tex");
     m_texture->create();
 
+    rend_target = createRenderTarget(renderer.state, this->m_texture);
 
 
     // Create the sampler in which we are going to put the texture
@@ -395,7 +396,6 @@ const ModifiedVideo& mesh2 = ModifiedVideo::instance();
 
     // Initialize the renderState needed for renderTargetForInput
 
-    m_render_state = renderer.state;
   }
 
   //int m_rotationCount = 0;
@@ -514,7 +514,7 @@ const ModifiedVideo& mesh2 = ModifiedVideo::instance();
   }
 
   QRhiTexture* m_texture{};
-  score::gfx::RenderState m_render_state{};
+  score::gfx::TextureRenderTarget rend_target;
   bool m_uploaded = false;
 };
 #include <Gfx/Qt5CompatPop> // clang-format: keep
