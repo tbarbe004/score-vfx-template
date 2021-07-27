@@ -206,8 +206,7 @@ layout(location = 0) out vec4 fragColor;
 void main ()
 {
   fragColor = texture(y_tex, v_texcoord.xy);
-  if(fragColor.a == 0.)
-    fragColor = vec4(fragColor.xy, 0., 1.);
+  //fragColor = vec4(v_texcoord.xy, 0., 1.);
 }
 )_";
 
@@ -350,17 +349,7 @@ const ModifiedVideo& mesh2 = ModifiedVideo::instance();
     auto& rhi = *renderer.state.rhi;
 
     // Create GPU textures for the image
-    const QSize sz = n.m_image.size();
-    m_texture = rhi.newTexture(
-        QRhiTexture::BGRA8,
-        QSize{sz.width(), sz.height()},
-        1,
-        QRhiTexture::Flag{});
-
-    m_texture->setName("Node::tex");
-    m_texture->create();
-
-    rend_target = createRenderTarget(renderer.state, this->m_texture);
+    rend_target = createRenderTarget(renderer.state, QRhiTexture::BGRA8, renderer.state.size);
 
 
     // Create the sampler in which we are going to put the texture
@@ -375,7 +364,7 @@ const ModifiedVideo& mesh2 = ModifiedVideo::instance();
       sampler->setName("Node::sampler");
       sampler->create();
       //m_samplers.push_back({sampler, m_texture});
-      m_samplers.push_back({sampler, renderTargetForInput(*this->node.input[0]).texture});
+      m_samplers.push_back({sampler, rend_target.texture});
     }
     SCORE_ASSERT(n.m_vertexS.isValid());
     SCORE_ASSERT(n.m_fragmentS.isValid());
@@ -483,13 +472,6 @@ const ModifiedVideo& mesh2 = ModifiedVideo::instance();
     // Update the process UBO (indicates timing)
     res.updateDynamicBuffer(
         m_processUBO, 0, sizeof(score::gfx::ProcessUBO), &this->node.standardUBO);
-
-    // If images haven't been uploaded yet, upload them.
-    if (!m_uploaded)
-    {
-      res.uploadTexture(m_texture, n.m_image);
-      m_uploaded = true;
-    }
   }
 
   // Everything is set up, we can render our mesh
@@ -506,16 +488,12 @@ const ModifiedVideo& mesh2 = ModifiedVideo::instance();
   // Free resources allocated in this class
   void release(score::gfx::RenderList& r) override
   {
-    m_texture->deleteLater();
-    m_texture = nullptr;
-
+    rend_target.release();
     // This will free all the other resources - material & process UBO, etc
     defaultRelease(r);
   }
 
-  QRhiTexture* m_texture{};
   score::gfx::TextureRenderTarget rend_target;
-  bool m_uploaded = false;
 };
 #include <Gfx/Qt5CompatPop> // clang-format: keep
 
