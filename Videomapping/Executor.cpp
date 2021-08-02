@@ -48,6 +48,11 @@ ProcessExecutorComponent::ProcessExecutorComponent(
 
     this->node = n;
     m_ossia_process = std::make_shared<ossia::node_process>(n);
+
+    n->add_control();
+    n->add_control();
+    n->add_control();
+    n->add_control();
   }
   catch (...)
   {

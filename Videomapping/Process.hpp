@@ -29,6 +29,8 @@ public:
 
   ~Model() override;
 
+  constexpr bool hasExternalUI() { return false; }
+
 private:
   QString prettyName() const noexcept override;
 };

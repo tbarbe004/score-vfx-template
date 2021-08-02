@@ -3,7 +3,6 @@
 #include <Gfx/Graph/Node.hpp>
 #include <Gfx/Graph/ShaderCache.hpp>
 #include <Gfx/TexturePort.hpp>
-#include <Process/Dataflow/Port.hpp>
 #include <Process/Dataflow/WidgetInlets.hpp>
 
 #include <wobjectimpl.h>
@@ -18,6 +17,42 @@ Model::Model(
 {
   metadata().setInstanceName(*this);
   m_inlets.push_back(new Gfx::TextureInlet{Id<Process::Port>(0), this});
+
+  ossia::vec2f min{-1., -1.};
+  ossia::vec2f max{1., 1.};
+
+  m_inlets.push_back(new Process::XYSlider{
+      min,
+      max,
+      ossia::vec2f{-1., 1.},
+      QString(tr("top left")),
+      Id<Process::Port>(1),
+      this});
+
+  m_inlets.push_back(new Process::XYSlider{
+      min,
+      max,
+      ossia::vec2f{-1., 1.},
+      QString(tr("top right")),
+      Id<Process::Port>(2),
+      this});
+
+  m_inlets.push_back(new Process::XYSlider{
+      min,
+      max,
+      ossia::vec2f{-1., -1.},
+      QString(tr("botom left")),
+      Id<Process::Port>(3),
+      this});
+
+  m_inlets.push_back(new Process::XYSlider{
+      min,
+      max,
+      ossia::vec2f{1., -1.},
+      QString(tr("botom right")),
+      Id<Process::Port>(4),
+      this});
+
   m_outlets.push_back(new Gfx::TextureOutlet{Id<Process::Port>(0), this});
 }
 

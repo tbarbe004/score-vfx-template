@@ -7,5 +7,6 @@
 
 namespace Videomapping
 {
-using LayerFactory = Process::GenericDefaultLayerFactory<Videomapping::Model>;
+using LayerFactory = Process::
+EffectLayerFactory_T<Videomapping::Model,Process::DefaultEffectItem>;
 }

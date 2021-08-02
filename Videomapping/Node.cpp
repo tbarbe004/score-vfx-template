@@ -5,6 +5,8 @@
 #include <score/tools/Debug.hpp>
 #include <Gfx/Graph/Utils.hpp>
 
+#include <Process/Dataflow/WidgetInlets.hpp>
+
 namespace Videomapping
 {
 /** Here we define a mesh fairly manually and in a fairly suboptimal way
@@ -29,7 +31,7 @@ struct ModifiedVideo final : score::gfx::Mesh
 
     static constexpr const vec3 vertices[4]
         = {{1., 0., -1.},
-           {-4., 1., -1.}, //
+           {-4., 1., -1.},
            {-2., 3., 1.},
            {1., 3., 1.}};
 
@@ -475,14 +477,13 @@ const ModifiedVideo& mesh2 = ModifiedVideo::instance();
   }
 
   // Everything is set up, we can render our mesh
-  QRhiResourceUpdateBatch* runRenderPass(
+  void runRenderPass(
       score::gfx::RenderList& renderer,
       QRhiCommandBuffer& cb,
       score::gfx::Edge& edge) override
   {
     const auto& mesh = ModifiedVideo::instance();
     defaultRenderPass(renderer, mesh, cb, edge);
-    return nullptr;
   }
 
   // Free resources allocated in this class
