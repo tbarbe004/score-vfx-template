@@ -18,37 +18,37 @@ Model::Model(
   metadata().setInstanceName(*this);
   m_inlets.push_back(new Gfx::TextureInlet{Id<Process::Port>(0), this});
 
-  ossia::vec2f min{-1., -1.};
-  ossia::vec2f max{1., 1.};
+  ossia::vec3f min{-1., -1., 0.};
+  ossia::vec3f max{1., 1., 0.};
 
-  m_inlets.push_back(new Process::XYSlider{
+  m_inlets.push_back(new Process::XYZSlider{
       min,
       max,
-      ossia::vec2f{-1., 1.},
+      ossia::vec3f{-1., 1., 0.},
       QString(tr("top left")),
       Id<Process::Port>(1),
       this});
 
-  m_inlets.push_back(new Process::XYSlider{
+  m_inlets.push_back(new Process::XYZSlider{
       min,
       max,
-      ossia::vec2f{-1., 1.},
+      ossia::vec3f{-1., 1., 0.},
       QString(tr("top right")),
       Id<Process::Port>(2),
       this});
 
-  m_inlets.push_back(new Process::XYSlider{
+  m_inlets.push_back(new Process::XYZSlider{
       min,
       max,
-      ossia::vec2f{-1., -1.},
+      ossia::vec3f{-1., -1., 0.},
       QString(tr("botom left")),
       Id<Process::Port>(3),
       this});
 
-  m_inlets.push_back(new Process::XYSlider{
+  m_inlets.push_back(new Process::XYZSlider{
       min,
       max,
-      ossia::vec2f{1., -1.},
+      ossia::vec3f{1., -1., 0.},
       QString(tr("botom right")),
       Id<Process::Port>(4),
       this});

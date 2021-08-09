@@ -82,7 +82,7 @@ struct ModifiedVideo final : score::gfx::Mesh
   }
 
   // Generate our mesh data
-  const std::vector<float> mesh = generateModifiedVideo();
+  std::vector<float> base_mesh = generateModifiedVideo();
 
 
 
@@ -111,7 +111,7 @@ struct ModifiedVideo final : score::gfx::Mesh
 
     // These variables are used by score to upload the texture
     // and send the draw call automatically
-    vertexArray = mesh;
+    vertexArray = base_mesh;
     vertexCount = 6;
 
     // Note: if we had an interleaved mesh, where the data is stored like
@@ -135,9 +135,9 @@ struct ModifiedVideo final : score::gfx::Mesh
   }
 
   // Utility singleton
-  static const ModifiedVideo& instance() noexcept
+  static ModifiedVideo& instance() noexcept
   {
-    static const ModifiedVideo modifiedVideo;
+    static ModifiedVideo modifiedVideo;
     return modifiedVideo;
   }
 
@@ -232,7 +232,6 @@ Node::Node()
   input.push_back(
       new score::gfx::Port{this, {}, score::gfx::Types::Image, {}});
 
-
   // Create an output port to indicate that this node
   // draws something
   output.push_back(
@@ -319,16 +318,56 @@ private:
     return {ps, srb};
   }
 
-const ModifiedVideo& mesh2 = ModifiedVideo::instance();
+    ModifiedVideo& mesh = ModifiedVideo::instance();
+
+    //function that initialize some variables to frame the camera
+
+    void fixCamera(){
+        x_min = mesh.vertexArray[0];
+        x_max = mesh.vertexArray[0];
+        y_min = mesh.vertexArray[1];
+        y_max = mesh.vertexArray[1];
+        z_min = mesh.vertexArray[2];
+        z_max = mesh.vertexArray[2];
+
+        for (int i = 1; i < 4; i++){
+            if (x_min > mesh.vertexArray[i*3]){
+                x_min = mesh.vertexArray[i*3];
+            }
+            if (x_max < mesh.vertexArray[i*3]){
+                x_max = mesh.vertexArray[i*3];
+            }
+            if (y_min > mesh.vertexArray[i*3 + 1]){
+                y_min = mesh.vertexArray[i*3 + 1];
+            }
+            if (y_max < mesh.vertexArray[i*3 + 1]){
+                y_max = mesh.vertexArray[i*3 + 1];
+            }
+            if (z_min < mesh.vertexArray[i*3 + 2]){
+                z_min = mesh.vertexArray[i*3 + 2];
+            }
+            if (z_max > mesh.vertexArray[i*3 + 2]){
+                z_max = mesh.vertexArray[i*3 + 2];
+            }
+        }
+
+        x_ratio = x_max - x_min;
+        y_ratio = y_max - y_min;
+        //float z_ratio = z_max - z_min;
+
+        x_midpoint = (x_max + x_min) /2.;
+        y_midpoint = (y_max + y_min) /2.;
+        z_midpoint = (z_max + z_min) /2.;
+    }
 
   void init(score::gfx::RenderList& renderer) override
   {
-    const auto& mesh = ModifiedVideo::instance();
 
     // Load the mesh data into the GPU
     {
       auto [mbuffer, ibuffer] = renderer.initMeshBuffer(mesh);
       m_meshBuffer = mbuffer;
+      m_meshBuffer->setType(QRhiBuffer::Dynamic);
       m_idxBuffer = ibuffer;
     }
 
@@ -385,11 +424,14 @@ const ModifiedVideo& mesh2 = ModifiedVideo::instance();
       }
     }
 
-    // Initialize the renderState needed for renderTargetForInput
+    // initialize values for a good position of camera
+
+    fixCamera();
 
   }
 
-  //int m_rotationCount = 0;
+
+
   void update(score::gfx::RenderList& renderer, QRhiResourceUpdateBatch& res)
       override
   {
@@ -401,49 +443,8 @@ const ModifiedVideo& mesh2 = ModifiedVideo::instance();
       // We use the Qt class QMatrix4x4 as an utility
       // as it provides everything needed for projection transformations
 
-      // We first compute the min/max to place correctly the camera
-
-      float x_min = mesh2.vertexArray[0];
-      float x_max = mesh2.vertexArray[0];
-      float y_min = mesh2.vertexArray[1];
-      float y_max = mesh2.vertexArray[1];
-      float z_min = mesh2.vertexArray[2];
-      float z_max = mesh2.vertexArray[2];
-
-      for (int i = 1; i < 4; i++){
-          if (x_min > mesh2.vertexArray[i*3]){
-              x_min = mesh2.vertexArray[i*3];
-          }
-          if (x_max < mesh2.vertexArray[i*3]){
-              x_max = mesh2.vertexArray[i*3];
-          }
-          if (y_min > mesh2.vertexArray[i*3 + 1]){
-              y_min = mesh2.vertexArray[i*3 + 1];
-          }
-          if (y_max < mesh2.vertexArray[i*3 + 1]){
-              y_max = mesh2.vertexArray[i*3 + 1];
-          }
-          if (z_min < mesh2.vertexArray[i*3 + 2]){
-              z_min = mesh2.vertexArray[i*3 + 2];
-          }
-          if (z_max > mesh2.vertexArray[i*3 + 2]){
-              z_max = mesh2.vertexArray[i*3 + 2];
-          }
-      }
-
-      float x_ratio = x_max - x_min;
-      float y_ratio = y_max - y_min;
-      //float z_ratio = z_max - z_min;
-
-      float x_midpoint = (x_max + x_min) /2.;
-      float y_midpoint = (y_max + y_min) /2.;
-      float z_midpoint = (z_max + z_min) /2.;
-
-
-      // Our object rotates in a very crude way
       QMatrix4x4 model;
       model.scale(3 / std::max(x_ratio, y_ratio));
-      //model.rotate(m_rotationCount++, QVector3D(0, 0, 0));
 
       // The camera and viewports are fixed
       QMatrix4x4 view;
@@ -466,6 +467,10 @@ const ModifiedVideo& mesh2 = ModifiedVideo::instance();
       score::gfx::copyMatrix(view, ubo.view);
       score::gfx::copyMatrix(projection, ubo.projection);
       score::gfx::copyMatrix(norm, ubo.modelNormal);
+
+      //Update the dynamic buffer for the mesh
+      //updateCoord();    //need to put the inputs as arguments
+      res.updateDynamicBuffer(m_meshBuffer, 0, mesh.vertexCount * sizeof (int), mesh.base_mesh.data());
 
       // Send the camera UBO to the graphics card
       res.updateDynamicBuffer(m_material.buffer, 0, m_material.size, &ubo);
@@ -494,6 +499,23 @@ const ModifiedVideo& mesh2 = ModifiedVideo::instance();
     defaultRelease(r);
   }
 
+  void updateCoord(std::vector<float> first_point,
+                   std::vector<float> second_point,
+                   std::vector<float> third_point,
+                   std::vector<float> fourth_point)
+  {
+      for (int i = 0; i < 3; i++)
+      {
+          mesh.base_mesh[i] = first_point[i];
+          mesh.base_mesh[i] = first_point[i];
+          mesh.base_mesh[i] = first_point[i];
+          mesh.base_mesh[i] = first_point[i];
+
+      }
+  }
+
+  float x_min, x_max, y_min, y_max, z_min, z_max;
+  float x_ratio, y_ratio, x_midpoint, y_midpoint, z_midpoint;
   score::gfx::TextureRenderTarget rend_target;
 };
 #include <Gfx/Qt5CompatPop> // clang-format: keep

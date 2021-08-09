@@ -2,7 +2,7 @@
 
 #include <Gfx/GfxApplicationPlugin.hpp>
 #include <Gfx/GfxContext.hpp>
-#include <Gfx/GfxExec.hpp>
+#include <Gfx/GfxExecNode.hpp>
 #include <Gfx/Graph/PhongNode.hpp>
 #include <Gfx/TexturePort.hpp>
 #include <Process/Dataflow/Port.hpp>
@@ -49,10 +49,25 @@ ProcessExecutorComponent::ProcessExecutorComponent(
     this->node = n;
     m_ossia_process = std::make_shared<ossia::node_process>(n);
 
-    n->add_control();
-    n->add_control();
-    n->add_control();
-    n->add_control();
+    for (std::size_t i = 0; i < 6; i++)
+      {
+        auto ctrl = qobject_cast<Process::ControlInlet*>(element.inlets()[i]);
+        auto& p = n->add_control();
+        p->value = ctrl->value();
+
+        p->changed = true;
+
+        QObject::connect(
+            ctrl,
+            &Process::ControlInlet::valueChanged,
+            this,
+            con_unvalidated{ctx, i, 0, n});
+      }
+
+      n->root_outputs().push_back(new ossia::texture_outlet);
+
+      this->node = n;
+      m_ossia_process = std::make_shared<ossia::node_process>(n);
   }
   catch (...)
   {
