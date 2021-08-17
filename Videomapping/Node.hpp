@@ -14,10 +14,12 @@ public:
 
   score::gfx::NodeRenderer*
   createRenderer(score::gfx::RenderList& r) const noexcept override;
+  void process(const score::gfx::Message& msg) override;
 
 private:
   score::gfx::ModelCameraUBO ubo;
 
+  ossia::vec3f top_left, top_right, bottom_left, bottom_right;
   friend Renderer;
   QImage m_image;
 };

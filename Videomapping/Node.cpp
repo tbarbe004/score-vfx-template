@@ -7,6 +7,8 @@
 
 #include <Process/Dataflow/WidgetInlets.hpp>
 
+using namespace score::gfx;
+
 namespace Videomapping
 {
 /** Here we define a mesh fairly manually and in a fairly suboptimal way
@@ -80,6 +82,8 @@ struct ModifiedVideo final : score::gfx::Mesh
 
     return meshBuf;
   }
+
+
 
   // Generate our mesh data
   std::vector<float> base_mesh = generateModifiedVideo();
@@ -243,6 +247,61 @@ Node::~Node()
   // We do not want to free m_materialData as it is
   // not allocated dynamically
   m_materialData.release();
+}
+
+void Node::process(const score::gfx::Message& msg)
+{
+  ProcessNode::process(msg.token);
+
+  int32_t p = 0;
+  for (const gfx_input& m: msg.input)
+  {
+    if(auto val = std::get_if<ossia::value>(&m))
+    {
+    switch(p)
+    {
+        case 0:
+        {
+          //texture, nothing to do
+          break;
+        }
+        case 1:
+        {
+          // top-left point
+          {
+            top_left = ossia::convert<ossia::vec3f>(*val);
+          }
+          break;
+        }
+        case 2:
+        {
+          // top-right point
+          {
+            top_right = ossia::convert<ossia::vec3f>(*val);
+          }
+          break;
+        }
+        case 3:
+        {
+          // bottom-left point
+          {
+            bottom_left = ossia::convert<ossia::vec3f>(*val);
+          }
+          break;
+        }
+        case 4:
+        {
+          // bottom-right point
+          {
+            bottom_right = ossia::convert<ossia::vec3f>(*val);
+          }
+          break;
+        }
+      }
+    }
+    p++;
+  }
+
 }
 
 // This header is used because some function names change between Qt 5 and Qt 6
@@ -436,6 +495,8 @@ private:
       override
   {
     auto& n = static_cast<const Node&>(this->node);
+
+    updateCoord(n.top_left, n.top_right, n.bottom_left, n.bottom_right);
     {
       // Set up a basic camera
       auto& ubo = (score::gfx::ModelCameraUBO&)n.ubo;
@@ -499,21 +560,20 @@ private:
     defaultRelease(r);
   }
 
-  void updateCoord(std::vector<float> first_point,
-                   std::vector<float> second_point,
-                   std::vector<float> third_point,
-                   std::vector<float> fourth_point)
+  void updateCoord(ossia::vec3f first_point,
+                   ossia::vec3f second_point,
+                   ossia::vec3f third_point,
+                   ossia::vec3f fourth_point)
   {
       for (int i = 0; i < 3; i++)
       {
           mesh.base_mesh[i] = first_point[i];
-          mesh.base_mesh[i] = first_point[i];
-          mesh.base_mesh[i] = first_point[i];
-          mesh.base_mesh[i] = first_point[i];
+          mesh.base_mesh[i+3] = second_point[i];
+          mesh.base_mesh[i+6] = third_point[i];
+          mesh.base_mesh[i+9] = fourth_point[i];
 
       }
   }
-
   float x_min, x_max, y_min, y_max, z_min, z_max;
   float x_ratio, y_ratio, x_midpoint, y_midpoint, z_midpoint;
   score::gfx::TextureRenderTarget rend_target;

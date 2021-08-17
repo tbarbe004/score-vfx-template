@@ -41,7 +41,7 @@ Model::Model(
       min,
       max,
       ossia::vec3f{-1., -1., 0.},
-      QString(tr("botom left")),
+      QString(tr("bottom left")),
       Id<Process::Port>(3),
       this});
 
@@ -49,7 +49,7 @@ Model::Model(
       min,
       max,
       ossia::vec3f{1., -1., 0.},
-      QString(tr("botom right")),
+      QString(tr("bottom right")),
       Id<Process::Port>(4),
       this});
 
