@@ -32,10 +32,10 @@ struct ModifiedVideo final : score::gfx::Mesh
     };
 
     static constexpr const vec3 vertices[4]
-        = {{1., 0., -1.},
-           {-4., 1., -1.},
-           {-2., 3., 1.},
-           {1., 3., 1.}};
+        = {{1., 0., 0.},
+           {1., 2., 0.},
+           {0., 0., 0.},
+           {0., 2., 0.}};
 
     static constexpr const vec2 texCoords[4]
         = {{0, 0}, //
@@ -382,31 +382,31 @@ private:
     //function that initialize some variables to frame the camera
 
     void fixCamera(){
-        x_min = mesh.vertexArray[0];
-        x_max = mesh.vertexArray[0];
-        y_min = mesh.vertexArray[1];
-        y_max = mesh.vertexArray[1];
-        z_min = mesh.vertexArray[2];
-        z_max = mesh.vertexArray[2];
+        x_min = mesh.base_mesh[0];
+        x_max = mesh.base_mesh[0];
+        y_min = mesh.base_mesh[1];
+        y_max = mesh.base_mesh[1];
+        z_min = mesh.base_mesh[2];
+        z_max = mesh.base_mesh[2];
 
         for (int i = 1; i < 4; i++){
-            if (x_min > mesh.vertexArray[i*3]){
-                x_min = mesh.vertexArray[i*3];
+            if (x_min > mesh.base_mesh[i*3]){
+                x_min = mesh.base_mesh[i*3];
             }
-            if (x_max < mesh.vertexArray[i*3]){
-                x_max = mesh.vertexArray[i*3];
+            if (x_max < mesh.base_mesh[i*3]){
+                x_max = mesh.base_mesh[i*3];
             }
-            if (y_min > mesh.vertexArray[i*3 + 1]){
-                y_min = mesh.vertexArray[i*3 + 1];
+            if (y_min > mesh.base_mesh[i*3 + 1]){
+                y_min = mesh.base_mesh[i*3 + 1];
             }
-            if (y_max < mesh.vertexArray[i*3 + 1]){
-                y_max = mesh.vertexArray[i*3 + 1];
+            if (y_max < mesh.base_mesh[i*3 + 1]){
+                y_max = mesh.base_mesh[i*3 + 1];
             }
-            if (z_min < mesh.vertexArray[i*3 + 2]){
-                z_min = mesh.vertexArray[i*3 + 2];
+            if (z_min < mesh.base_mesh[i*3 + 2]){
+                z_min = mesh.base_mesh[i*3 + 2];
             }
-            if (z_max > mesh.vertexArray[i*3 + 2]){
-                z_max = mesh.vertexArray[i*3 + 2];
+            if (z_max > mesh.base_mesh[i*3 + 2]){
+                z_max = mesh.base_mesh[i*3 + 2];
             }
         }
 

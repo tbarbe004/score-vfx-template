@@ -49,7 +49,7 @@ ProcessExecutorComponent::ProcessExecutorComponent(
     this->node = n;
     m_ossia_process = std::make_shared<ossia::node_process>(n);
 
-    for (std::size_t i = 0; i < 6; i++)
+    for (std::size_t i = 1; i < 5; i++)
       {
         auto ctrl = qobject_cast<Process::ControlInlet*>(element.inlets()[i]);
         auto& p = n->add_control();
